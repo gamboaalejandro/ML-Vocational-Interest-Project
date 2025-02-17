@@ -1,0 +1,106 @@
+[MASTER]
+# Procesa de manera recursiva todos los .py dentro de tu proyecto excepto los que des aquí:
+ignore=venv,migrations,tests
+# (puedes quitar 'tests' de la lista si quieres que también se apliquen reglas de Pylint al código de test)
+
+# Número de subprocesos que Pylint usará para ejecutar análisis en paralelo
+jobs=4
+
+# Plugins que pueden ser útiles (por ejemplo, mccabe para complejidad ciclomática)
+load-plugins=pylint.extensions.mccabe
+
+# Mínimo/valor base de la puntuación general aceptable (puedes ignorarlo si no deseas esa métrica)
+score=yes
+
+##############################################################################
+# MESSAGES CONTROL
+##############################################################################
+[MESSAGES CONTROL]
+# Habilitar y deshabilitar mensajes (checks). Pylint tiene MUUUCHOS:
+# https://pylint.pycqa.org/en/latest/technical_reference/features.html
+# A continuación se listan algunos que a menudo se deshabilitan porque son muy estrictos
+# o generan mucho ruido en proyectos grandes.
+
+disable=
+    C0103,  # Constante/variable/método no cumple con el estilo (naming convention). A menudo demasiado restrictivo.
+    C0114,  # Missing module docstring.
+    C0115,  # Missing class docstring.
+    C0116,  # Missing function or method docstring.
+    R0903,  # Too few public methods (clase con pocos métodos, a menudo normal en clases "DTO" o "models").
+    R0902,  # Too many instance attributes.
+    R0913,  # Too many arguments in function/method. (ajústalo según tu preferencia)
+    R0914,  # Too many local variables.
+    R0915,  # Too many statements in function/method.
+    W0511,  # Todo (comentarios con TODO). Si no quieres que Pylint te marque los TODO.
+    W1203,  # Use of f-string vs logging (%). Puede ser discutible en ciertos equipos.
+    C0209,  # f-string used with both named and positional placeholders. (útil en algunos casos, molesto en otros)
+    # Suma o quita según veas conveniente
+
+
+##############################################################################
+# BASIC
+##############################################################################
+[BASIC]
+# Exigir encoding utf-8:
+
+# Forzar convención de nombres (snake_case, PascalCase...). Si no quieres ser tan estricto, déjalo en empty
+variable-rgx=[a-z_][a-z0-9_]*$
+argument-rgx=[a-z_][a-z0-9_]*$
+function-rgx=[a-z_][a-z0-9_]*$
+class-rgx=[A-Z_][a-zA-Z0-9]+$
+module-rgx=(([a-z_][a-z0-9_]*)|(__.*__))$
+const-rgx=([A-Z_][A-Z0-9_]*)|(__.*__)
+
+# Máximo de atributos públicos en una clase (R0902). Si quieres ser estricto, mantenlo bajo.
+max-public-methods=20
+
+##############################################################################
+# FORMAT
+##############################################################################
+[FORMAT]
+# Máximo de caracteres por línea (en coordinación con Black, se sugiere 88)
+max-line-length=88
+
+# Para evitar que Pylint se queje por espacios en blanco antes de los dos puntos de tipo en anotaciones:
+good-names=i,j,k,ex,Run,_,pk,db  # Añade aquí nombres cortos permitidos en bucles, etc.
+
+##############################################################################
+# DESIGN
+##############################################################################
+[DESIGN]
+# Máxima complejidad ciclomática (mccabe). Un valor de 10-12 es razonable para la mayoría.
+max-complexity=10
+
+
+##############################################################################
+# TYPECHECK
+##############################################################################
+[TYPECHECK]
+# Permite comprobaciones de tipos más avanzadas
+ignored-modules=numpy,torch,pandas,matplotlib  # Añade o quita según librerías que no quieras que Pylint "parse"
+
+##############################################################################
+# PYTHON 3 ONLY
+##############################################################################
+[REFACTORING]
+# Aquí puedes afinar reglas de refactorización.
+
+##############################################################################
+# REPORTS
+##############################################################################
+[REPORTS]
+# Reporta o no las líneas que han sido analizadas. Normalmente no es crítico.
+reports=no
+output-format=colorized  # color en la terminal
+
+##############################################################################
+# Misc
+##############################################################################
+[MISC]
+notes=FIXME,XXX,TODO
+
+##############################################################################
+# EXTENSIONS CONFIG (ej. mccabe)
+##############################################################################
+[EXTENSIONS]
+# mccabe complexity (ya lo mencionamos arriba con 'max-complexity=10')

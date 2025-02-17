@@ -1,0 +1,38 @@
+[flake8]
+# Máximo de caracteres por línea (coherente con Black, que usa 88 por defecto)
+max-line-length = 88
+
+# Ignoramos algunas reglas que chocan con Black o que suelen ser demasiado restrictivas
+ignore =
+    E203,  
+    E501,  
+    W503,  
+    D100,  
+    D101,  
+    D102,  
+    D103,  
+    D104,  
+    D105,  
+    D107,  
+
+# A través de 'select' definimos qué “categorías” de advertencias se van a activar:
+# C, E, F, W → Errores y advertencias base
+# B → flake8-bugbear
+# B9 → flake8-bugbear (checks extra)
+# D → flake8-docstrings
+# N → pep8-naming (reglas de nombrado)
+# C4 → flake8-comprehensions
+select = C,E,F,W,B,B9,D,N,C4
+
+# Excluir ciertas carpetas o ficheros que no deseas comprobar
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    venv,
+    .venv,
+    migrations,
+    tests
+    __init__.py
+max-complexity = 10
