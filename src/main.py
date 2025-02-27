@@ -1,16 +1,21 @@
 from fastapi import FastAPI, Request, status
 from fastapi.openapi.utils import get_openapi
 from starlette.responses import JSONResponse
+from src.config.settings import get_environment_variables
 from src.utils.logger import LoggerFactory
 from src.features.prediction_router import prediction_router
 logger = LoggerFactory.create_logger()
 
 
+settings = get_environment_variables()
+
+print(settings)
+
 def create_app() -> FastAPI:
     """Crea la aplicación FastAPI con configuración limpia."""
     app = FastAPI(
         swagger_ui_parameters={"syntaxHighlight.theme": "obsidian"},
-        title='ML-API-VOCATIONAL-INTEREST',
+        title=settings.APP_NAME,
         debug=False,
         description="API para comunicar el modelo de machine learning con la aplicación principal",
         version="1.0.0",
@@ -64,4 +69,4 @@ app.include_router(prediction_router)
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("src.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("src.main:app", host=settings.HOST, port=settings.PORT, reload=True)
