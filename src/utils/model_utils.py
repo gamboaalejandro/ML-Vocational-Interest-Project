@@ -30,14 +30,18 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # Cargar tokenizer
 tokenizer = BertTokenizer.from_pretrained('dccuchile/bert-base-spanish-wwm-cased')
 
-# Cargar modelo con la misma configuración
-model = BertForSequenceClassification.from_pretrained(
-    'dccuchile/bert-base-spanish-wwm-cased',
-    num_labels=len(index_to_category)
-)
-model.load_state_dict(torch.load('best_model_state.bin', map_location=device))
-model.to(device)
-model.eval()  # Modo inferencia
+# Cargar modelo con manejo de error
+try:
+    model = BertForSequenceClassification.from_pretrained(
+        'dccuchile/bert-base-spanish-wwm-cased',
+        num_labels=len(index_to_category)
+    )
+    model.load_state_dict(torch.load('best_model_state.bin', map_location=device))
+    model.to(device)
+    model.eval()  # Modo inferencia
+except Exception as e:
+    print(f"Error al cargar el modelo: {str(e)}")
+    model = None
 
 
 def predict_career(text_list, tokenizer, model, max_length=128):

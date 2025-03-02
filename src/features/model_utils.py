@@ -34,13 +34,25 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 tokenizer = BertTokenizer.from_pretrained('dccuchile/bert-base-spanish-wwm-cased')
 
 # Cargar modelo con la misma configuración
-model = BertForSequenceClassification.from_pretrained(
-    'dccuchile/bert-base-spanish-wwm-cased',
-    num_labels=len(index_to_category)
-)
-model.load_state_dict(torch.load('notebooks/best_model_state.bin', map_location=device))
-model.to(device)
-model.eval()  # Modo inferencia
+# Modificar la parte de carga del modelo para incluir manejo de errores
+try:
+    model = BertForSequenceClassification.from_pretrained(
+        'dccuchile/bert-base-spanish-wwm-cased',
+        num_labels=len(index_to_category)
+    )
+    try:
+        model.load_state_dict(torch.load('best_model_state.bin', map_location=device))
+        print("Modelo cargado exitosamente desde best_model_state.bin")
+    except FileNotFoundError:
+        print("Advertencia: No se encontró el archivo best_model_state.bin. Usando modelo base sin fine-tuning.")
+    except Exception as e:
+        print(f"Error al cargar el modelo: {str(e)}. Usando modelo base sin fine-tuning.")
+    
+    model.to(device)
+    model.eval()  # Modo inferencia
+except Exception as e:
+    print(f"Error crítico al inicializar el modelo: {str(e)}")
+    model = None
 
 # %%
 ## predict carrer
@@ -225,25 +237,5 @@ def predict_career_with_preprocessing(text_list: list, tokenizer, model,
 
     return [result]  # Mantener la estructura de retorno como lista de listas
 
-# Ejemplo de uso:
-user_text = """Este es un texto el cual se debe intentar procesar Talento nato para programar """
-
-# Realizar predicción con el texto preprocesado
-predictions = predict_career_with_preprocessing(
-    text_list=[user_text],
-    tokenizer=tokenizer,
-    model=model,
-    index_to_category=index_to_category,
-    device=device,
-    top_k=3
-)
-
-print("Texto original:")
-print(user_text)
-print("\nTexto preprocesado:")
-print(preprocess_text(user_text))
-print("\nPredicciones:")
-for career, prob in predictions[0]:
-    print(f"{career}: {prob:.2%}")
 
 

@@ -1,0 +1,46 @@
+# Dependencias básicas
+numpy>=2.0.0,<3.0.0
+pandas>=2.0.0
+scikit-learn>=1.0.0
+
+# PyTorch y transformers
+torch>=2.0.0
+transformers>=4.30.0
+sentencepiece>=0.1.99
+
+# Utilidades de ML
+tqdm>=4.65.0
+spacy>=3.7.0
+seaborn>=0.12.0
+matplotlib>=3.7.0
+
+# FastAPI y dependencias
+fastapi>=0.95.0
+uvicorn>=0.15.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+
+# Dependencias adicionales del notebook
+accelerate>=0.20.0
+blis>=0.7.0
+beautifulsoup4>=4.11.0
+huggingface-hub>=0.16.0
+annotated-types==0.7.0
+anyio==4.6.2.post1
+certifi==2024.8.30
+charset-normalizer==3.4.0
+click==8.1.7
+cloudpathlib==0.20.0
+colorama==0.4.6
+confection==0.1.5
+filelock==3.16.1
+fsspec==2024.10.0
+
+# Dependencias específicas para el procesamiento de datos
+regex>=2023.0.0
+nltk>=3.8.0
+
+# Dependencias para el modelo BERT y entrenamiento
+tensorboard>=2.15.0
+scikit-learn>=1.0.0 
