@@ -4,6 +4,8 @@
 # %%
 import torch
 from transformers import BertTokenizer, BertForSequenceClassification
+import os
+from pathlib import Path
 
 # Mapea índice -> categoría (lo que usaste en training)
 index_to_category = {
@@ -26,6 +28,10 @@ index_to_category = {
     16: "TEOLOGÍA"
 }
 
+# Obtener la ruta base del proyecto y la ruta al modelo
+CURRENT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = CURRENT_DIR.parent.parent
+MODEL_PATH = PROJECT_ROOT / 'notebooks' / 'best_model_state.bin'
 
 # Dispositivo (GPU si está disponible)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -34,17 +40,20 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 tokenizer = BertTokenizer.from_pretrained('dccuchile/bert-base-spanish-wwm-cased')
 
 # Cargar modelo con la misma configuración
-# Modificar la parte de carga del modelo para incluir manejo de errores
 try:
     model = BertForSequenceClassification.from_pretrained(
         'dccuchile/bert-base-spanish-wwm-cased',
         num_labels=len(index_to_category)
     )
+    
     try:
-        model.load_state_dict(torch.load('best_model_state.bin', map_location=device))
-        print("Modelo cargado exitosamente desde best_model_state.bin")
-    except FileNotFoundError:
-        print("Advertencia: No se encontró el archivo best_model_state.bin. Usando modelo base sin fine-tuning.")
+        if MODEL_PATH.exists():
+            model.load_state_dict(torch.load(str(MODEL_PATH), map_location=device))
+            print(f"Modelo cargado exitosamente desde {MODEL_PATH}")
+        else:
+            print(f"Advertencia: No se encontró el archivo en {MODEL_PATH}. Usando modelo base sin fine-tuning.")
+            print(f"Ruta actual del script: {CURRENT_DIR}")
+            print(f"Ruta base del proyecto: {PROJECT_ROOT}")
     except Exception as e:
         print(f"Error al cargar el modelo: {str(e)}. Usando modelo base sin fine-tuning.")
     

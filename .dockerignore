@@ -17,3 +17,4 @@ build/
 .vscode/
 *.log
 requirements.txt 
+*.bin
