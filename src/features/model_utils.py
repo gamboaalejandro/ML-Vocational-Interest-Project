@@ -1,31 +1,22 @@
-# %% [markdown]
-# ## Preparar el entorno y carga del modelo 
-
-# %%
 import torch
 from transformers import BertTokenizer, BertForSequenceClassification
-import os
+from keybert import KeyBERT
+import spacy
+import re
+from sklearn.feature_extraction.text import TfidfVectorizer
+import torch
 from pathlib import Path
 
-# Mapea índice -> categoría (lo que usaste en training)
+from src.utils.logger import LoggerFactory
+logger = LoggerFactory.create_logger()
+
+# 📌 Mapea índice -> categoría
 index_to_category = {
-    0: "INDUSTRIAL", 
-    1: "CIVIL", 
-    2: "INFORMÁTICA",
-    3: "TELECOMUNICACIONES",
-    4: "ARQUITECTURA",
-    5: "FILOSOFÍA",
-    6: "PSICOLOGÍA",
-    7: "LETRAS",
-    8: "COMUNICACIÓN SOCIAL",
-    9: "EDUCACIÓN",
-    10: "ADMINISTRACIÓN",
-    11: "CONTADURÍA",
-    12: "RELACIONES INDUSTRIALES",
-    13: "SOCIOLOGÍA",
-    14: "ECONOMÍA",
-    15: "DERECHO",
-    16: "TEOLOGÍA"
+    0: "INDUSTRIAL", 1: "CIVIL", 2: "INFORMÁTICA", 3: "TELECOMUNICACIONES",
+    4: "ARQUITECTURA", 5: "FILOSOFÍA", 6: "PSICOLOGÍA", 7: "LETRAS",
+    8: "COMUNICACIÓN SOCIAL", 9: "EDUCACIÓN", 10: "ADMINISTRACIÓN",
+    11: "CONTADURÍA", 12: "RELACIONES INDUSTRIALES", 13: "SOCIOLOGÍA",
+    14: "ECONOMÍA", 15: "DERECHO", 16: "TEOLOGÍA"
 }
 
 # Obtener la ruta base del proyecto y la ruta al modelo
@@ -63,54 +54,112 @@ except Exception as e:
     print(f"Error crítico al inicializar el modelo: {str(e)}")
     model = None
 
-# %%
-## predict carrer
+# 📌 Cargar modelo de KeyBERT
+kw_model = KeyBERT("sentence-transformers/bert-base-nli-mean-tokens")
 
-def predict_career(text_list, tokenizer, model, max_length=128):
-    """
-    text_list: lista de strings con las respuestas de usuario
-    tokenizer: tokenizer de Hugging Face
-    model: modelo BertForSequenceClassification cargado
-    """
-    # Tokenizar
-    inputs = tokenizer(
-        text_list,
-        padding=True,
-        truncation=True,
-        max_length=max_length,
-        return_tensors="pt"
-    )
+# 📌 Cargar modelo de SpaCy para español
+nlp = spacy.load("es_core_news_sm")
+stopwords_es = list(nlp.Defaults.stop_words)
+
+
+
+####FUNCTIONS FOR TEST PONDERATION
+
+# def preprocess_text(text):
+#     text = text.lower()
+#     text = re.sub(r'[^\w\sáéíóúñü]', '', text)  # Eliminar caracteres especiales, pero conservar tildes
+#     text = re.sub(r'\s+', ' ', text).strip()  # Reemplaza múltiples espacios
     
-    input_ids = inputs['input_ids'].to(device)
-    attention_mask = inputs['attention_mask'].to(device)
-
-    model.eval()
-    with torch.no_grad():
-        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-        logits = outputs.logits  # [batch_size, num_labels]
+#     # Procesar el texto con SpaCy sin eliminar todas las stopwords
+#     doc = nlp(text)
+#     cleaned_text = " ".join([token.text for token in doc if not token.is_punct])
     
-    # Obtener predicciones
-    preds = torch.argmax(logits, dim=1).cpu().numpy()  # Índices de clase
-    predicted_labels = [index_to_category[p] for p in preds]
-    return predicted_labels
+#     return cleaned_text
 
 
+def preprocess_text(text):
+    # Si es una lista, unir los elementos en un solo string
+    if isinstance(text, list):
+        text = " ".join(text)
+    
+    text = text.lower()
+    text = re.sub(r'[^\w\sáéíóúñü]', '', text)  # Eliminar caracteres especiales, pero conservar tildes
+    text = re.sub(r'\s+', ' ', text).strip()  # Reemplaza múltiples espacios
+    
+    # Procesar el texto con SpaCy sin eliminar todas las stopwords
+    doc = nlp(text)
+    cleaned_text = " ".join([token.text for token in doc if not token.is_punct])
+    
+    return cleaned_text
 
-def predict_career_top3(text_list, tokenizer, model, index_to_category, 
-                        device, max_length=512, top_k=3, threshold=0.5, temperature=2.0):
+def extract_keywords(text, top_k=10):
     """
-    text_list: lista de strings con las respuestas de usuario
-    tokenizer: tokenizer de Hugging Face
-    model: modelo BertForSequenceClassification cargado
-    index_to_category: diccionario {índice: categoría}
-    device: 'cuda' o 'cpu'
-    max_length: longitud máxima de tokenización
-    top_k: número de predicciones (top) a retornar
-    threshold: umbral mínimo de probabilidad para asignar una clase (vs 'UNKNOWN')
+    Extrae palabras clave utilizando KeyBERT y TF-IDF.
     """
-    # Tokenizar
+    
+    print("el top k es ", top_k)
+    clean_text = preprocess_text(text)
+    keybert_keywords = kw_model.extract_keywords(clean_text, keyphrase_ngram_range=(1, 1), stop_words=stopwords_es, top_n=top_k)
+    vectorizer = TfidfVectorizer(stop_words=stopwords_es)
+    tfidf_scores = vectorizer.fit_transform([clean_text]).toarray().flatten()
+    tfidf_tokens = vectorizer.get_feature_names_out()
+
+    # Crear un diccionario para mantener el score más alto para cada palabra
+    keyword_scores = {}
+    
+    # Agregar scores de KeyBERT
+    for word, score in keybert_keywords:
+        keyword_scores[word] = score
+        
+    # # Agregar o actualizar con scores de TF-IDF
+    # for idx, token in enumerate(tfidf_tokens):
+    #     if token in keyword_scores:
+    #         keyword_scores[token] = max(keyword_scores[token], tfidf_scores[idx])
+    #     else:
+    #         keyword_scores[token] = tfidf_scores[idx]
+            
+    # Agregar/actualizar con scores de TF-IDF
+    for idx, token in enumerate(tfidf_tokens):
+        normal_token = token.strip().lower()
+        if normal_token in keyword_scores:
+            # Mantenemos el score máximo
+            keyword_scores[normal_token] = max(keyword_scores[normal_token], tfidf_scores[idx])
+        else:
+            keyword_scores[normal_token] = tfidf_scores[idx]
+
+    # Ordenar por score y tomar los top_k únicos
+    sorted_keywords = sorted(keyword_scores.items(), key=lambda x: x[1], reverse=True)
+
+    unique_keywords = []
+    seen_words = set()
+
+    for word, score in sorted_keywords:
+        # 'word' ya está normalizada (sin espacios ni mayúsculas)
+        if word not in seen_words:
+            seen_words.add(word)
+            unique_keywords.append((word, score))
+            if len(unique_keywords) == top_k:
+                break
+
+    print("unique keywords", unique_keywords)
+    return unique_keywords
+
+
+def predict_career_with_keywords(text, tokenizer, model, index_to_category, device, max_length=512, top_k=15, temperature=1.0):
+    """
+    Preprocesa el texto, extrae palabras clave y realiza la predicción de carreras.
+    """
+    print("ENTRANDO A KEYBERT ", text)
+    keywords = extract_keywords(text, top_k=20)
+    extracted_keywords = " ".join([word for word, _ in keywords])
+    print("ENTRANDO A KEYBERT ")
+    # 🔹 Concatenar palabras clave al texto original
+    enriched_text = f"{text} {extracted_keywords}"
+    logger.log(f"Texto con palabras clave: {enriched_text}", "info")
+    print(enriched_text)
+    
     inputs = tokenizer(
-        text_list,
+        [enriched_text],  
         padding=True,
         truncation=True,
         max_length=max_length,
@@ -124,16 +173,12 @@ def predict_career_top3(text_list, tokenizer, model, index_to_category,
     with torch.no_grad():
         outputs = model(input_ids=input_ids, attention_mask=attention_mask)
         logits = outputs.logits
-        
-        # Aplicar temperatura para suavizar las probabilidades
         scaled_logits = logits / temperature
         probs = torch.softmax(scaled_logits, dim=1)
-        
         top_probs, top_indices = probs.topk(top_k, dim=1, largest=True, sorted=True)
 
     batch_results = []
-    for i in range(len(text_list)):
-        # Extraer las k probabilidades e índices para esta fila i
+    for i in range(len([text])):
         row_probs = top_probs[i].cpu().numpy()
         row_indices = top_indices[i].cpu().numpy()
 
@@ -146,51 +191,61 @@ def predict_career_top3(text_list, tokenizer, model, index_to_category,
     return batch_results
 
 
-import spacy
-import re
+## PRUEBA DE LA FUNCION DE PONDERACION CON EL MODELO KEYBERT 
 
-# Cargar el modelo de SpaCy para español
-nlp = spacy.load("es_core_news_sm")
+# # Texto filtrado y concatenado
+# user_text = """Como desarrollador de IA, creo modelos para luego utilizarlos en aplicaciones. 
+# Me gustaba mucho la parte matemática, por ser algo práctico una vez entendías el tema. 
+# Sin embargo, también me gustaba la materia de literatura, historia y biología. 
+# Educación física, soy mala en los deportes. 
+# Si, un curso de inglés, me gusta mucho el idioma. 
+# Me gusta ver series y películas, también ver documentales o videos para aprender cosas nuevas de ciencia, historia, cultura general. 
+# Ciencia, tecnología, arte y cultura. 
+# Acerca de ciencia, como la teoría de la relatividad, cuántica, me gusta mucho entender el mundo desde esa perspectiva. 
+# Crear, investigar y resolver problemas. 
+# Me interesa entender cómo funciona el mundo, Me gusta imaginar y crear cosas nuevas, Prefiero resolver problemas prácticos y concretos. 
+# En un café. 
+# Tecnológico. 
+# Emprender."""
 
-def preprocess_text(text: str) -> str:
-    """
-    Preprocesa el texto aplicando los siguientes pasos:
-    1. Convierte a minúsculas
-    2. Elimina caracteres especiales manteniendo acentos
-    3. Elimina espacios extra
-    4. Elimina stopwords
-    5. Aplica lematización
-    
-    Args:
-        text (str): Texto a preprocesar
-        
-    Returns:
-        str: Texto preprocesado
-    """
-    # Convertir a minúsculas
-    text = text.lower()
-    
-    # Eliminar caracteres especiales pero mantener acentos
-    text = re.sub(r'[^a-záéíóúñü\s]', '', text)
-    
-    # Reemplazar múltiples espacios por uno solo
-    text = re.sub(r'\s+', ' ', text)
-    
-    # Eliminar espacios al inicio y final
-    text = text.strip()
-    
-    # Procesar con SpaCy para lematización y eliminación de stopwords
-    doc = nlp(text)
-    
-    # Unir los lemas de las palabras que no son stopwords ni puntuación
-    cleaned_text = " ".join([token.lemma_ for token in doc 
-                           if not token.is_stop and not token.is_punct])
-    
-    return cleaned_text
+#user_text = """Desde muy joven, he sentido una gran pasión por la tecnología. Me encanta aprender y desarrollar soluciones de software que resuelvan problemas reales; por ello, he orientado mis estudios hacia la Ingeniería Informática. Además, me fascina el mundo de las telecomunicaciones, ya que creo que conectar a las personas a través de redes modernas y eficientes es clave para el avance social y económico. Por otro lado, también me interesa la parte gerencial y organizativa, lo que me lleva a valorar la Administración; considero esencial saber planificar, gestionar proyectos y liderar equipos para llevar adelante iniciativas tecnológicas. En resumen, mi formación y mis intereses se centran en el desarrollo de sistemas informáticos, la conectividad a través de telecomunicaciones y la gestión estratégica en entornos empresariales."""
+#user_text = """Estoy interesado en Ingeniería Industrial. Fui becado y congelé mi carrera en 2020 por temas económicos. Me gustaban las materias de Matemática e Historia de Venezuela. No me agradaban Biología y Física. Me interesa resolver problemas y explorar culturas. Me gustaría ejercer mi carrera en España y viajar por el mundo."""
+# user_text = "Me interesa trabajar con computadoras y desarrollar aplicaciones de software."
+
+
+# 🔹 Prueba con el texto deusuario (PRUEBA KEYBERT)
+# keywords = extract_keywords(user_text, top_k=15)
+# print("🔹 Palabras clave detectadas: con KEYBERT", keywords)
+
+
+
+# # 🔹 Realizar predicción con palabras clave añadidas
+# predictions = predict_career_with_keywords(
+#     text=user_text,
+#     tokenizer=tokenizer,
+#     model=model,
+#     index_to_category=index_to_category,
+#     device=device,
+#     temperature=1.3,
+#     top_k=3
+# )
+
+# print("🔹 Texto Original:")
+# print(user_text)
+# print("\n🔹 Palabras Clave Detectadas:")
+# print(extract_keywords(user_text, top_k=15))
+# print("\n🔹 Predicciones Mejoradas:")
+# for career, prob in predictions[0]:
+#     print(f"{career}: {prob:.2%}")
+
+
+
+# # Cargar el modelo de SpaCy para español
+# nlp = spacy.load("es_core_news_sm")
 
 def predict_career_with_preprocessing(text_list: list, tokenizer, model, 
-                                    index_to_category: dict, device: str,
-                                    max_length: int = 512, top_k: int = 3, temperature: float = 2.0) -> list:
+                                   index_to_category: dict, device: str,
+                                   max_length: int = 128, top_k: int = 3, temperature: float = 1.0) -> list:
     """
     Preprocesa el texto y realiza la predicción de carreras.
     
@@ -206,15 +261,12 @@ def predict_career_with_preprocessing(text_list: list, tokenizer, model,
     Returns:
         list: Lista de tuplas (carrera, probabilidad) para cada texto
     """
-    # Concatenar todas las respuestas en un solo texto
-    combined_text = " ".join(text_list)
-
-    # Preprocesar el texto combinado
-    processed_text = preprocess_text(combined_text)
-    print("tesxcto", processed_text)
+    # Preprocesar cada texto
+    processed_texts = [preprocess_text(text) for text in text_list]
+    
     # Tokenizar
     inputs = tokenizer(
-        [processed_text],  # Ahora es una lista con un solo texto
+        processed_texts,
         padding=True,
         truncation=True,
         max_length=max_length,
@@ -235,16 +287,56 @@ def predict_career_with_preprocessing(text_list: list, tokenizer, model,
         
         top_probs, top_indices = probs.topk(top_k, dim=1, largest=True, sorted=True)
 
-    # Procesar resultados (ahora solo hay una predicción)
-    row_probs = top_probs[0].cpu().numpy()
-    row_indices = top_indices[0].cpu().numpy()
 
-    result = []
-    for idx, p in zip(row_indices, row_probs):
-        category_name = index_to_category[idx]
-        result.append((category_name, float(p)))
+    batch_results = []
+    for i in range(len(text_list)):
+        row_probs = top_probs[i].cpu().numpy()
+        row_indices = top_indices[i].cpu().numpy()
 
-    return [result]  # Mantener la estructura de retorno como lista de listas
+        result = []
+        for idx, p in zip(row_indices, row_probs):
+            category_name = index_to_category[idx]
+            result.append((category_name, float(p)))
+        batch_results.append(result)
 
+    return batch_results
+
+# # Ejemplo de uso:
+# user_text = """Como desarrollador de IA, creo modelos para luego utilizarlos en aplicaciones. 
+# Me gustaba mucho la parte matemática, por ser algo práctico una vez entendías el tema. 
+# Sin embargo, también me gustaba la materia de literatura, historia y biología. 
+# Educación física, soy mala en los deportes. 
+# Si, un curso de inglés, me gusta mucho el idioma. 
+# Me gusta ver series y películas, también ver documentales o videos para aprender cosas nuevas de ciencia, historia, cultura general. 
+# Ciencia, tecnología, arte y cultura. 
+# Acerca de ciencia, como la teoría de la relatividad, cuántica, me gusta mucho entender el mundo desde esa perspectiva. 
+# Crear, investigar y resolver problemas. 
+# Me interesa entender cómo funciona el mundo, Me gusta imaginar y crear cosas nuevas, Prefiero resolver problemas prácticos y concretos. 
+# En un café. 
+# Tecnológico. 
+# Emprender."""
+
+# # user_text = """Desde muy joven, he sentido una gran pasión por la tecnología. Me encanta aprender y desarrollar soluciones de software que resuelvan problemas reales; por ello, he orientado mis estudios hacia la Ingeniería Informática. Además, me fascina el mundo de las telecomunicaciones, ya que creo que conectar a las personas a través de redes modernas y eficientes es clave para el avance social y económico. Por otro lado, también me interesa la parte gerencial y organizativa, lo que me lleva a valorar la Administración; considero esencial saber planificar, gestionar proyectos y liderar equipos para llevar adelante iniciativas tecnológicas. En resumen, mi formación y mis intereses se centran en el desarrollo de sistemas informáticos, la conectividad a través de telecomunicaciones y la gestión estratégica en entornos empresariales."""
+
+# #user_text = """Estoy interesado en Ingeniería Industrial. Fui becado y congelé mi carrera en 2020 por temas económicos. Me gustaban las materias de Matemática e Historia de Venezuela. No me agradaban Biología y Física. Me interesa resolver problemas y explorar culturas. Me gustaría ejercer mi carrera en España y viajar por el mundo."""
+
+# # Realizar predicción con el texto preprocesado
+# predictions = predict_career_with_preprocessing(
+#     text_list=[user_text],
+#     tokenizer=tokenizer,
+#     model=model,
+#     index_to_category=index_to_category,
+#     device=device,
+#     temperature=1.3,
+#     top_k=3,
+# )
+
+# print("Texto original:")
+# print(user_text)
+# print("\nTexto preprocesado:")
+# print(preprocess_text(user_text))
+# print("\nPredicciones:")
+# for career, prob in predictions[0]:
+#     print(f"{career}: {prob:.2%}")
 
 

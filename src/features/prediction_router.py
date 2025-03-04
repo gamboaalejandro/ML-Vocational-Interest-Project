@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, Depends
 from typing import List
 from pydantic import BaseModel
 from src.features.model_utils import (
-    predict_career_with_preprocessing,
+    predict_career_with_keywords,
     preprocess_text,
     tokenizer,
     model,
@@ -58,14 +58,14 @@ async def get_predictions(inputs: List[AnswerInput]):
     # Extraer la lista de textos
     texts = [item.respuesta for item in inputs]
     
-    # Generar predicciones para cada texto
-    predictions_list = predict_career_with_preprocessing(
-         text_list=texts,
-         tokenizer=tokenizer,
-         model=model,
-         index_to_category=index_to_category,
-         device=device,
-         top_k=3
+    predictions_list = predict_career_with_keywords(
+    text=texts,
+    tokenizer=tokenizer,
+    model=model,
+    index_to_category=index_to_category,
+    device=device,
+    temperature=1.3,
+    top_k=3
     )
     
     # Construir la respuesta
