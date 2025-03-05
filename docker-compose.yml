@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  ml-service:
+    build: .
+    ports:
+      - "8888:8888"  # JupyterLab
+      - "8000:8000"  # FastAPI
+    volumes:
+      - .:/app
+      - ./notebooks:/app/notebooks:ro  # Asegura que notebooks está montado
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, utility, compute]
+
+networks:
+  default:
+    driver: bridge 
