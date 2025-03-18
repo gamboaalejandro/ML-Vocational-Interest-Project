@@ -39,7 +39,8 @@ ENV PYTHONPATH=/app:$PYTHONPATH
 RUN mkdir -p /app/models
 
 # Instalamos JupyterLab y Uvicorn (para la API)
-RUN pip3 install jupyterlab uvicorn fastapi email-validator
+RUN pip3 install jupyterlab uvicorn fastapi email-validator keybert intel-extension-for-pytorch
+
 
 # Exponemos el puerto 8888 para JupyterLab y 8000 para la API
 EXPOSE 8888 8000
