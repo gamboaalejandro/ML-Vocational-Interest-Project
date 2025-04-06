@@ -8,7 +8,7 @@ services:
       - "8000:8000"  # FastAPI
     volumes:
       - .:/app
-      - ./notebooks:/app/notebooks:ro  # Asegura que notebooks está montado
+      - ./notebooks:/app/notebooks:wr  # Asegura que notebooks está montado
       - /tmp/.X11-unix:/tmp/.X11-unix  # Necesario para renderizado gráfico
     environment:
       - DISPLAY=$DISPLAY  # Para permitir renderizado gráfico
