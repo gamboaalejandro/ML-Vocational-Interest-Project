@@ -6,18 +6,17 @@ services:
       - "8000:8000"  # FastAPI
     volumes:
       - .:/app
-      - ./notebooks:/app/notebooks:ro  # Asegura que notebooks está montado
+      - ./notebooks:/app/notebooks:wr  # Asegura que notebooks está montado
+      - /tmp/.X11-unix:/tmp/.X11-unix  # Necesario para renderizado gráfico
     environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-    # ACTIVATE IF YOU WANT TO USE GPU AND U HAVE A NVIDIA GPU
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu, utility, compute]
+      - DISPLAY=$DISPLAY  # Para permitir renderizado gráfico
+    devices:
+      - /dev/dri:/dev/dri  # Pasa los dispositivos de renderizado gráfico (Intel GPU)
+    deploy:
+      resources:
+        reservations:
+          devices: []  # Elimina las referencias a NVIDIA
 
 networks:
   default:
-    driver: bridge 
+    driver: bridge
