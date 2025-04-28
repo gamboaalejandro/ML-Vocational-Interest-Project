@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   ml-service:
     build: .
@@ -11,13 +9,14 @@ services:
       - ./notebooks:/app/notebooks:ro  # Asegura que notebooks está montado
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu, utility, compute]
+    # ACTIVATE IF YOU WANT TO USE GPU AND U HAVE A NVIDIA GPU
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu, utility, compute]
 
 networks:
   default:
