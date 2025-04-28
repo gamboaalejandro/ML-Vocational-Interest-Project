@@ -191,58 +191,6 @@ def predict_career_with_keywords(text, tokenizer, model, index_to_category, devi
     return batch_results
 
 
-## PRUEBA DE LA FUNCION DE PONDERACION CON EL MODELO KEYBERT 
-
-# # Texto filtrado y concatenado
-# user_text = """Como desarrollador de IA, creo modelos para luego utilizarlos en aplicaciones. 
-# Me gustaba mucho la parte matemática, por ser algo práctico una vez entendías el tema. 
-# Sin embargo, también me gustaba la materia de literatura, historia y biología. 
-# Educación física, soy mala en los deportes. 
-# Si, un curso de inglés, me gusta mucho el idioma. 
-# Me gusta ver series y películas, también ver documentales o videos para aprender cosas nuevas de ciencia, historia, cultura general. 
-# Ciencia, tecnología, arte y cultura. 
-# Acerca de ciencia, como la teoría de la relatividad, cuántica, me gusta mucho entender el mundo desde esa perspectiva. 
-# Crear, investigar y resolver problemas. 
-# Me interesa entender cómo funciona el mundo, Me gusta imaginar y crear cosas nuevas, Prefiero resolver problemas prácticos y concretos. 
-# En un café. 
-# Tecnológico. 
-# Emprender."""
-
-#user_text = """Desde muy joven, he sentido una gran pasión por la tecnología. Me encanta aprender y desarrollar soluciones de software que resuelvan problemas reales; por ello, he orientado mis estudios hacia la Ingeniería Informática. Además, me fascina el mundo de las telecomunicaciones, ya que creo que conectar a las personas a través de redes modernas y eficientes es clave para el avance social y económico. Por otro lado, también me interesa la parte gerencial y organizativa, lo que me lleva a valorar la Administración; considero esencial saber planificar, gestionar proyectos y liderar equipos para llevar adelante iniciativas tecnológicas. En resumen, mi formación y mis intereses se centran en el desarrollo de sistemas informáticos, la conectividad a través de telecomunicaciones y la gestión estratégica en entornos empresariales."""
-#user_text = """Estoy interesado en Ingeniería Industrial. Fui becado y congelé mi carrera en 2020 por temas económicos. Me gustaban las materias de Matemática e Historia de Venezuela. No me agradaban Biología y Física. Me interesa resolver problemas y explorar culturas. Me gustaría ejercer mi carrera en España y viajar por el mundo."""
-# user_text = "Me interesa trabajar con computadoras y desarrollar aplicaciones de software."
-
-
-# 🔹 Prueba con el texto deusuario (PRUEBA KEYBERT)
-# keywords = extract_keywords(user_text, top_k=15)
-# print("🔹 Palabras clave detectadas: con KEYBERT", keywords)
-
-
-
-# # 🔹 Realizar predicción con palabras clave añadidas
-# predictions = predict_career_with_keywords(
-#     text=user_text,
-#     tokenizer=tokenizer,
-#     model=model,
-#     index_to_category=index_to_category,
-#     device=device,
-#     temperature=1.3,
-#     top_k=3
-# )
-
-# print("🔹 Texto Original:")
-# print(user_text)
-# print("\n🔹 Palabras Clave Detectadas:")
-# print(extract_keywords(user_text, top_k=15))
-# print("\n🔹 Predicciones Mejoradas:")
-# for career, prob in predictions[0]:
-#     print(f"{career}: {prob:.2%}")
-
-
-
-# # Cargar el modelo de SpaCy para español
-# nlp = spacy.load("es_core_news_sm")
-
 def predict_career_with_preprocessing(text_list: list, tokenizer, model, 
                                    index_to_category: dict, device: str,
                                    max_length: int = 128, top_k: int = 3, temperature: float = 1.0) -> list:

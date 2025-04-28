@@ -10,6 +10,7 @@ from starlette.responses import JSONResponse
 from src.config.settings import get_environment_variables
 from src.utils.logger import LoggerFactory
 from src.features.prediction_router import prediction_router
+from fastapi.middleware.cors import CORSMiddleware
 logger = LoggerFactory.create_logger()
 
 
@@ -71,6 +72,14 @@ def create_app() -> FastAPI:
 logger.log("Iniciando aplicación...")
 app = create_app()
 app.include_router(prediction_router)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:5175", "http://162.245.191.99:4173", "http://162.245.191.99:8001"],  # tu puerto Vite aquí
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 if __name__ == "__main__":
     import uvicorn
