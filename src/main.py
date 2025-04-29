@@ -75,7 +75,7 @@ app.include_router(prediction_router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5175", "http://162.245.191.99:4173", "http://162.245.191.99:8001"],  # tu puerto Vite aquí
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

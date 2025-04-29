@@ -16,7 +16,5 @@ services:
       resources:
         reservations:
           devices: []  # Elimina las referencias a NVIDIA
-
-networks:
-  default:
-    driver: bridge
+    networks:
+      - app-network 
