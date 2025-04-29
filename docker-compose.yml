@@ -17,4 +17,8 @@ services:
         reservations:
           devices: []  # Elimina las referencias a NVIDIA
     networks:
-      - app-network 
+      - app-network
+  
+  networks:
+    app-network:
+      external: true
